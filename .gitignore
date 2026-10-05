@@ -1,0 +1,7 @@
+node_modules
+.env
+client/dist
+server/uploads/*
+!server/uploads/audio/.gitkeep
+!server/uploads/covers/.gitkeep
+!server/uploads/avatars/.gitkeep

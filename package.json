@@ -1,0 +1,11 @@
+{
+  "name": "auraverse",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "npm --prefix server install && npm --prefix client install && npm --prefix client run build",
+    "start": "node server/index.js",
+    "seed": "node server/seed.js",
+    "import:catalog": "node server/importCatalog.js"
+  }
+}
