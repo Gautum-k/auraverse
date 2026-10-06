@@ -7,11 +7,14 @@ import Like from '../models/Like.js';
 import Playlist from '../models/Playlist.js';
 import { authMiddleware } from '../middleware/auth.js';
 
+import { processUploadedFile } from '../utils/storage.js';
+
 const router = express.Router();
 
 const uploadDir = path.join(process.cwd(), 'uploads');
 const audioDir = path.join(uploadDir, 'audio');
 const coversDir = path.join(uploadDir, 'covers');
+
 
 [uploadDir, audioDir, coversDir].forEach((dir) => {
   if (!fs.existsSync(dir)) {
@@ -157,11 +160,12 @@ router.post('/', authMiddleware, uploadMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'Please select an audio file to upload.' });
     }
 
-    const audioUrl = `/uploads/audio/${audioFile.filename}`;
+    const audioUrl = await processUploadedFile(audioFile, 'audio');
     const coverFile = req.files && req.files.cover ? req.files.cover[0] : null;
-    const coverUrl = coverFile ? `/uploads/covers/${coverFile.filename}` : '';
+    const coverUrl = coverFile ? await processUploadedFile(coverFile, 'image') : '';
 
     const dur = Number(duration) || 180;
+
 
     const track = new Track({
       title,
@@ -216,7 +220,7 @@ router.put('/:id', authMiddleware, uploadMiddleware, async (req, res) => {
           } catch (e) {}
         }
       }
-      const newCoverUrl = `/uploads/covers/${coverFile.filename}`;
+      const newCoverUrl = await processUploadedFile(coverFile, 'image');
       track.coverUrl = newCoverUrl;
       track.artworkUrl = newCoverUrl;
     }

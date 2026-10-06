@@ -11,7 +11,10 @@ import Playlist from '../models/Playlist.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { sendWelcomeEmail } from '../utils/mailer.js';
 
+import { processUploadedFile } from '../utils/storage.js';
+
 const router = express.Router();
+
 const JWT_SECRET = process.env.JWT_SECRET || 'auraverse-secret-key';
 
 const avatarsDir = path.join(process.cwd(), 'uploads', 'avatars');
@@ -160,7 +163,7 @@ router.put('/profile', authMiddleware, avatarUploadMiddleware, async (req, res) 
           } catch (e) {}
         }
       }
-      user.avatarUrl = `/uploads/avatars/${req.file.filename}`;
+      user.avatarUrl = await processUploadedFile(req.file, 'image');
     }
 
     await user.save();

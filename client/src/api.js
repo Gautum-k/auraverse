@@ -1,5 +1,12 @@
-const API_BASE = '/api';
-export const SERVER_BASE = '';
+const API_BASE = import.meta.env.VITE_API_URL || '';
+export const SERVER_BASE = API_BASE;
+
+export function getMediaUrl(url) {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  if (url.startsWith('/uploads')) return `${API_BASE}${url}`;
+  return url;
+}
 
 export const getToken = () => localStorage.getItem('auraverse_token');
 export const setToken = (token) => localStorage.setItem('auraverse_token', token);
@@ -20,9 +27,12 @@ export async function apiFetch(path, options = {}) {
     headers['Content-Type'] = 'application/json';
   }
 
+  const requestPath = path.startsWith('/api') ? path : `/api${path}`;
+  const url = `${API_BASE}${requestPath}`;
+
   let res;
   try {
-    res = await fetch(`${API_BASE}${path}`, {
+    res = await fetch(url, {
       ...options,
       headers,
     });
@@ -51,7 +61,7 @@ export const normalize = (item) => {
 
 /* --- Auth APIs --- */
 export async function registerApi(userData) {
-  const res = await apiFetch('/auth/register', {
+  const res = await apiFetch('/api/auth/register', {
     method: 'POST',
     body: JSON.stringify(userData),
   });
@@ -60,7 +70,7 @@ export async function registerApi(userData) {
 }
 
 export async function loginApi(credentials) {
-  const res = await apiFetch('/auth/login', {
+  const res = await apiFetch('/api/auth/login', {
     method: 'POST',
     body: JSON.stringify(credentials),
   });
@@ -69,7 +79,7 @@ export async function loginApi(credentials) {
 }
 
 export async function fetchMeApi() {
-  const res = await apiFetch('/auth/me');
+  const res = await apiFetch('/api/auth/me');
   return {
     ...res,
     user: normalize(res.user),
@@ -80,12 +90,12 @@ export async function fetchMeApi() {
 /* --- Tracks APIs --- */
 export async function fetchTracksApi(params = {}) {
   const query = new URLSearchParams(params).toString();
-  const res = await apiFetch(`/tracks${query ? `?${query}` : ''}`);
+  const res = await apiFetch(`/api/tracks${query ? `?${query}` : ''}`);
   return res.map(normalize);
 }
 
 export async function uploadTrackApi(formData) {
-  const res = await apiFetch('/tracks', {
+  const res = await apiFetch('/api/tracks', {
     method: 'POST',
     body: formData,
   });
@@ -94,7 +104,7 @@ export async function uploadTrackApi(formData) {
 
 export async function updateTrackApi(id, updates) {
   const isFormData = updates instanceof FormData;
-  const res = await apiFetch(`/tracks/${id}`, {
+  const res = await apiFetch(`/api/tracks/${id}`, {
     method: 'PUT',
     body: isFormData ? updates : JSON.stringify(updates),
   });
@@ -102,14 +112,14 @@ export async function updateTrackApi(id, updates) {
 }
 
 export async function deleteTrackApi(id) {
-  return await apiFetch(`/tracks/${id}`, {
+  return await apiFetch(`/api/tracks/${id}`, {
     method: 'DELETE',
   });
 }
 
 export async function updateProfileApi(data) {
   const isFormData = data instanceof FormData;
-  const res = await apiFetch('/auth/profile', {
+  const res = await apiFetch('/api/auth/profile', {
     method: 'PUT',
     body: isFormData ? data : JSON.stringify(data),
   });
@@ -119,12 +129,12 @@ export async function updateProfileApi(data) {
 /* --- Artists APIs --- */
 export async function fetchArtistsApi(params = {}) {
   const query = new URLSearchParams(params).toString();
-  const res = await apiFetch(`/artists${query ? `?${query}` : ''}`);
+  const res = await apiFetch(`/api/artists${query ? `?${query}` : ''}`);
   return res.map(normalize);
 }
 
 export async function fetchArtistDetailsApi(id) {
-  const res = await apiFetch(`/artists/${id}`);
+  const res = await apiFetch(`/api/artists/${id}`);
   return {
     artist: normalize(res.artist),
     tracks: (res.tracks || []).map(normalize),
@@ -133,7 +143,7 @@ export async function fetchArtistDetailsApi(id) {
 }
 
 export async function toggleFollowApi(artistId) {
-  return await apiFetch(`/artists/${artistId}/follow`, {
+  return await apiFetch(`/api/artists/${artistId}/follow`, {
     method: 'POST',
   });
 }
@@ -141,12 +151,12 @@ export async function toggleFollowApi(artistId) {
 /* --- Collabs APIs --- */
 export async function fetchCollabsApi(params = {}) {
   const query = new URLSearchParams(params).toString();
-  const res = await apiFetch(`/collabs${query ? `?${query}` : ''}`);
+  const res = await apiFetch(`/api/collabs${query ? `?${query}` : ''}`);
   return res.map(normalize);
 }
 
 export async function createCollabApi(collabData) {
-  const res = await apiFetch('/collabs', {
+  const res = await apiFetch('/api/collabs', {
     method: 'POST',
     body: JSON.stringify(collabData),
   });
@@ -154,7 +164,7 @@ export async function createCollabApi(collabData) {
 }
 
 export async function toggleInterestApi(id) {
-  const res = await apiFetch(`/collabs/${id}/interest`, {
+  const res = await apiFetch(`/api/collabs/${id}/interest`, {
     method: 'POST',
   });
   return normalize(res);
@@ -162,12 +172,12 @@ export async function toggleInterestApi(id) {
 
 /* --- Playlists APIs --- */
 export async function fetchPlaylistsApi() {
-  const res = await apiFetch('/playlists');
+  const res = await apiFetch('/api/playlists');
   return res.map(normalize);
 }
 
 export async function createPlaylistApi(name) {
-  const res = await apiFetch('/playlists', {
+  const res = await apiFetch('/api/playlists', {
     method: 'POST',
     body: JSON.stringify({ name }),
   });
@@ -175,7 +185,7 @@ export async function createPlaylistApi(name) {
 }
 
 export async function updatePlaylistApi(id, name) {
-  const res = await apiFetch(`/playlists/${id}`, {
+  const res = await apiFetch(`/api/playlists/${id}`, {
     method: 'PUT',
     body: JSON.stringify({ name }),
   });
@@ -183,13 +193,13 @@ export async function updatePlaylistApi(id, name) {
 }
 
 export async function deletePlaylistApi(id) {
-  return await apiFetch(`/playlists/${id}`, {
+  return await apiFetch(`/api/playlists/${id}`, {
     method: 'DELETE',
   });
 }
 
 export async function addTrackToPlaylistApi(playlistId, trackId) {
-  const res = await apiFetch(`/playlists/${playlistId}/tracks`, {
+  const res = await apiFetch(`/api/playlists/${playlistId}/tracks`, {
     method: 'POST',
     body: JSON.stringify({ trackId }),
   });
@@ -197,7 +207,7 @@ export async function addTrackToPlaylistApi(playlistId, trackId) {
 }
 
 export async function removeTrackFromPlaylistApi(playlistId, trackId) {
-  const res = await apiFetch(`/playlists/${playlistId}/tracks/${trackId}`, {
+  const res = await apiFetch(`/api/playlists/${playlistId}/tracks/${trackId}`, {
     method: 'DELETE',
   });
   return normalize(res);
@@ -205,7 +215,8 @@ export async function removeTrackFromPlaylistApi(playlistId, trackId) {
 
 /* --- Likes APIs --- */
 export async function toggleLikeApi(trackId) {
-  return await apiFetch(`/likes/${trackId}`, {
+  return await apiFetch(`/api/likes/${trackId}`, {
     method: 'POST',
   });
 }
+

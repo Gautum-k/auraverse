@@ -33,18 +33,33 @@ const avatarsDir = path.join(uploadDir, 'avatars');
 });
 
 // Middleware
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin or any localhost origin in dev
-      if (!origin || /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)) {
-        return callback(null, true);
-      }
+const clientUrl = process.env.CLIENT_URL;
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
+    if (!origin) return callback(null, true);
+
+    // Allow CLIENT_URL origin if defined
+    if (clientUrl && (origin === clientUrl || origin === clientUrl.replace(/\/$/, ''))) {
       return callback(null, true);
-    },
-    credentials: true,
-  })
-);
+    }
+
+    // Allow any localhost origin
+    if (/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(null, false);
+  },
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Authorization', 'Content-Type'],
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -60,10 +75,10 @@ app.use('/api/artists', artistRoutes);
 app.use('/api/likes', likeRoutes);
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', service: 'Auraverse Backend API' });
+  res.json({ status: 'ok' });
 });
 
-// Serve frontend in single-server production build
+// Serve frontend in single-server production build if client/dist exists
 const rootClientDist = path.join(process.cwd(), '..', 'client', 'dist');
 const localClientDist = path.join(process.cwd(), 'client', 'dist');
 const clientDist = fs.existsSync(rootClientDist)
@@ -72,13 +87,17 @@ const clientDist = fs.existsSync(rootClientDist)
   ? localClientDist
   : null;
 
-if (clientDist) {
+if (clientDist && fs.existsSync(clientDist)) {
   app.use(express.static(clientDist));
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) {
       return next();
     }
-    res.sendFile(path.join(clientDist, 'index.html'));
+    const indexPath = path.join(clientDist, 'index.html');
+    if (fs.existsSync(indexPath)) {
+      return res.sendFile(indexPath);
+    }
+    next();
   });
 } else {
   // 404 handler for API if no client build is served
@@ -105,7 +124,12 @@ const getDbHost = (uri) => {
   }
 };
 
-// Connect database and start server
+// Start server immediately so health check works fast
+app.listen(PORT, () => {
+  console.log(`Auraverse server listening on port ${PORT}`);
+});
+
+// Connect database asynchronously
 mongoose
   .connect(MONGODB_URI)
   .then(() => {
@@ -121,12 +145,8 @@ mongoose
     console.log(`  Email Service : ${emailMode}`);
     console.log(`  Server URL    : http://localhost:${PORT}`);
     console.log('==================================================');
-
-    app.listen(PORT, () => {
-      console.log(`Auraverse server listening on port ${PORT}`);
-    });
   })
   .catch((err) => {
-    console.error('MongoDB is not running. Start the MongoDB service and try again.');
-    process.exit(1);
+    console.error('MongoDB connection error:', err.message);
   });
+
